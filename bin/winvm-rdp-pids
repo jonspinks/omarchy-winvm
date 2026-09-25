@@ -1,0 +1,27 @@
+#!/bin/bash
+# Print the pid of every RDP session into the Omarchy Windows VM, one per line.
+#
+# There are three kinds, and none of them can be found by one test:
+#   - omarchy-windows-vm up to 4.0.4 passes the arguments on argv, window
+#     title included;
+#   - later versions pipe them in with /args-from:stdin, so argv shows only
+#     that, but the launcher itself is the parent process;
+#   - bin/winvm-connect passes them by file descriptor and sets WINVM_RDP=1
+#     in the environment (readable only by this user).
+# Match on argv and environment entries, not substrings: `pgrep -f` would also
+# hit any shell or editor whose command text merely mentions these names.
+
+for pid in $(pgrep -u "$UID" -x xfreerdp3); do
+  if tr '\0' '\n' <"/proc/$pid/cmdline" 2>/dev/null | grep -qx '/title:Windows VM - Omarchy' ||
+    tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qx 'WINVM_RDP=1'; then
+    echo "$pid"
+    continue
+  fi
+  ppid=$(awk '{print $4}' "/proc/$pid/stat" 2>/dev/null)
+  [[ -n $ppid ]] || continue
+  mapfile -t argv < <(tr '\0' '\n' <"/proc/$ppid/cmdline" 2>/dev/null)
+  # bash <script> <action> [flag]
+  if [[ ${argv[1]:-} == */omarchy-windows-vm && ( ${argv[2]:-} == launch || ${argv[2]:-} == start ) ]]; then
+    echo "$pid"
+  fi
+done
