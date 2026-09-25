@@ -59,6 +59,9 @@ waiting on its RDP window, `bin/winvm-stop` closes that window and lets the
 launcher stop the VM, as it would anyway. Stopping the container directly
 would make the launcher ask for a password a second time. Docker's SIGTERM
 becomes an ACPI shutdown in the guest, so Windows gets to shut down cleanly.
+It only closes RDP windows it can still match to the session it found: each
+one is identified by pid and start time, checked again just before the kill,
+so a pid that was reused by another process is left alone.
 
 ## The numbers
 
