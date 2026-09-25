@@ -13,6 +13,25 @@
 
 set -u
 
+starttime() {
+  local stat
+  { stat=$(<"/proc/$1/stat"); } 2>/dev/null || return 1
+  read -ra stat <<<"${stat##*) }"
+  echo "${stat[19]}"
+}
+
+# Signal only the processes winvm-rdp-pids found. A session that exited since
+# then may have left its pid to something else, so check that the start time
+# still matches right before each kill; a pid is only reused by a process that
+# started later.
+close_rdp() {
+  local entry pid start
+  for entry in "${rdp[@]}"; do
+    read -r pid start <<<"$entry"
+    [[ -n $start && $(starttime "$pid") == "$start" ]] || continue
+    kill "$pid" 2>/dev/null
+  done
+}
 
 waiting_launcher=""
 for pid in $(pgrep -u "$UID" -f omarchy-windows-vm); do
@@ -27,9 +46,9 @@ done
 mapfile -t rdp < <("${BASH_SOURCE[0]%/*}/winvm-rdp-pids")
 
 if [[ -n $waiting_launcher ]] && ((${#rdp[@]})); then
-  kill "${rdp[@]}"
+  close_rdp
   exit 0
 fi
 
-((${#rdp[@]})) && kill "${rdp[@]}"
+((${#rdp[@]})) && close_rdp
 exec omarchy-windows-vm stop
