@@ -4,7 +4,7 @@ An icon that exists only while the Omarchy Windows VM (`omarchy-windows-vm`)
 is running. Click it for what the VM is costing the host and the controls to
 get back to it or shut it down.
 
-![The Windows VM panel](screenshot.png)
+![The Windows VM panel](preview.png)
 
 ## Install
 
@@ -14,6 +14,18 @@ omarchy plugin add https://github.com/jonspinks/omarchy-winvm --enable
 
 `--enable` places it in the bar; `omarchy plugin enable blacksheep.winvm --before omarchy.agents`
 puts it somewhere specific. It stays hidden until the VM is running.
+
+## Remove
+
+```bash
+omarchy plugin remove blacksheep.winvm
+```
+
+This takes it out of the bar and deletes the plugin folder. It changes nothing
+else: the VM, its data in `~/.windows` and `~/Windows`, and its credentials
+are Omarchy's and stay as they are. The only file the plugin ever creates is
+`~/.config/windows/krb5.conf`, and only if the Omarchy launcher hasn't
+already created it (see Connect below). It's safe to leave in place.
 
 ## Interactions
 
@@ -72,6 +84,12 @@ while the panel is open. Both are settable inline in `shell.json`:
 - The Omarchy Windows VM, installed with `omarchy-windows-vm install`
 - Docker with the systemd cgroup driver on cgroup v2 (the Arch default), so
   the container shows up as a `docker-<id>.scope` under `system.slice`
+
+Everything else it runs ships with Omarchy or the Windows VM install:
+`xfreerdp3` (FreeRDP 3, which the VM installer pulls in), `jq`, `hyprctl`,
+`xdg-open`, and `omarchy-launch-or-focus`. Stopping the VM goes through
+`omarchy-windows-vm stop`, which asks for authorization with polkit. The
+plugin itself never uses sudo, pkexec or the Docker socket.
 
 ## Troubleshooting
 
