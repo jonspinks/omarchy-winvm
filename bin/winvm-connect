@@ -1,0 +1,53 @@
+#!/bin/bash
+# Focus the Windows VM's RDP window, or open a new one if none is up.
+#
+# `omarchy-windows-vm launch` would also get you a window, but on a VM that is
+# already running it re-runs the privileged bring-up and asks for a password
+# just to reconnect. The VM is up; all that's missing is the RDP client, and
+# that needs nothing more than the credentials the installer already saved.
+#
+# A session opened here does not stop the VM when it closes. That lifecycle
+# belongs to the `launch` that started the VM, and it is still waiting on its
+# own window.
+
+set -u
+
+if [[ ${1:-} != --open ]]; then
+  exec omarchy-launch-or-focus xfreerdp "$0 --open"
+fi
+
+CREDENTIALS_FILE="$HOME/.config/windows/credentials"
+
+read_credential() {
+  local want="$1" key value
+  [[ -f $CREDENTIALS_FILE ]] || return 1
+  while IFS='=' read -r key value; do
+    [[ $key == "$want" ]] && { printf '%s' "$value"; return 0; }
+  done <"$CREDENTIALS_FILE"
+  return 1
+}
+
+WIN_USER=$(read_credential USERNAME) || WIN_USER=docker
+WIN_PASS=$(read_credential PASSWORD) || WIN_PASS=admin
+
+# Same realm-less Kerberos config the launcher writes, for the same reason:
+# without it FreeRDP goes looking for MIT's KDC and hangs when offline.
+KRB5_CONF="$HOME/.config/windows/krb5.conf"
+if [[ ! -f $KRB5_CONF ]]; then
+  mkdir -p "$(dirname "$KRB5_CONF")"
+  printf '[libdefaults]\n  dns_lookup_kdc = false\n  dns_lookup_realm = false\n' >"$KRB5_CONF"
+fi
+export KRB5_CONFIG="$KRB5_CONF"
+
+# Match the launcher's scaling so a reconnect looks the same as a launch.
+scale=$(hyprctl monitors -j | jq -r '.[] | select(.focused == true) | .scale')
+pct=$(awk -v s="$scale" 'BEGIN { print int(s * 100) }')
+rdp_scale=()
+if ((pct >= 170)); then rdp_scale=(/scale:180)
+elif ((pct >= 130)); then rdp_scale=(/scale:140)
+fi
+
+exec xfreerdp3 /u:"$WIN_USER" /p:"$WIN_PASS" /v:127.0.0.1:3389 -grab-keyboard \
+  /sound /microphone /clipboard /cert:ignore /title:"Windows VM - Omarchy" \
+  /dynamic-resolution /gfx:AVC444 /floatbar:sticky:off,default:visible,show:fullscreen \
+  "${rdp_scale[@]}"

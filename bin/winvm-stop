@@ -1,0 +1,43 @@
+#!/bin/bash
+# Shut the Windows VM down with one authorization prompt, not two.
+#
+# A plain `omarchy-windows-vm launch` stays behind waiting on its RDP window,
+# and stops the VM itself when that window closes. Stopping the container
+# underneath it drops the window, and then the launcher asks for a password to
+# stop a VM that is already gone. So when that launcher is still waiting, close
+# its window and let it do the stop. Otherwise (launched with --keep-alive, or
+# the waiting launcher is gone) close any RDP window and stop it directly.
+#
+# Docker stops the container with SIGTERM, which dockurr/windows turns into an
+# ACPI shutdown for the guest, so Windows gets to shut down cleanly.
+
+set -u
+
+# Match on argv, not a substring of the command line: `pgrep -f` would also
+# hit any shell or editor whose command text merely mentions these names.
+rdp_pids() {
+  local pid
+  for pid in $(pgrep -u "$UID" -x xfreerdp3); do
+    tr '\0' '\n' <"/proc/$pid/cmdline" 2>/dev/null | grep -qx '/title:Windows VM - Omarchy' && echo "$pid"
+  done
+}
+
+waiting_launcher=""
+for pid in $(pgrep -u "$UID" -f omarchy-windows-vm); do
+  mapfile -t argv < <(tr '\0' '\n' <"/proc/$pid/cmdline" 2>/dev/null)
+  # bash <script> <action> [flag]
+  [[ ${argv[1]:-} == */omarchy-windows-vm ]] || continue
+  [[ ${argv[2]:-} == launch || ${argv[2]:-} == start ]] || continue
+  [[ ${argv[3]:-} == --keep-alive || ${argv[3]:-} == -k ]] && continue
+  waiting_launcher=$pid
+done
+
+mapfile -t rdp < <(rdp_pids)
+
+if [[ -n $waiting_launcher ]] && ((${#rdp[@]})); then
+  kill "${rdp[@]}"
+  exit 0
+fi
+
+((${#rdp[@]})) && kill "${rdp[@]}"
+exec omarchy-windows-vm stop

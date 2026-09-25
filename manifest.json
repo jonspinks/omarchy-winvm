@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "blacksheep.winvm",
+  "name": "Windows VM",
+  "version": "1.0.0",
+  "author": "Jon",
+  "license": "MIT",
+  "description": "Appears in the bar only while the Omarchy Windows VM is running, with connect/stop controls and what the VM is costing the host",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "Panel.qml" },
+  "barWidget": {
+    "displayName": "Windows VM",
+    "description": "Hidden until the Windows VM container is running. The panel shows the guest's CPU, memory, disk and network use against what it was allocated and against the host, and connects, opens the web console or shared folder, or shuts the VM down.",
+    "category": "System",
+    "aliases": ["winvm", "windows", "windows-vm", "vm"],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "interval": 2,
+      "idleInterval": 5
+    },
+    "schema": [
+      {
+        "key": "interval",
+        "type": "number",
+        "label": "Sample interval (open)",
+        "description": "Seconds between samples while the panel is open"
+      },
+      {
+        "key": "idleInterval",
+        "type": "number",
+        "label": "Sample interval (closed)",
+        "description": "Seconds between checks while the panel is closed; this is also how quickly the icon appears after the VM starts"
+      }
+    ]
+  }
+}
