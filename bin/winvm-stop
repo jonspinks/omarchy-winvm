@@ -18,7 +18,10 @@ set -u
 rdp_pids() {
   local pid
   for pid in $(pgrep -u "$UID" -x xfreerdp3); do
-    tr '\0' '\n' <"/proc/$pid/cmdline" 2>/dev/null | grep -qx '/title:Windows VM - Omarchy' && echo "$pid"
+    if tr '\0' '\n' <"/proc/$pid/cmdline" 2>/dev/null | grep -qx '/title:Windows VM - Omarchy' ||
+      tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qx 'WINVM_RDP=1'; then
+      echo "$pid"
+    fi
   done
 }
 

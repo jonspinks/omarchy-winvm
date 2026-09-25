@@ -2,3 +2,10 @@
 *.bak.*
 *.orig
 *.rej
+
+# Never commit VM state or secrets, even by accident
+credentials
+credentials.*
+*.img
+*.rom
+*.vars

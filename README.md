@@ -47,6 +47,13 @@ using the credentials the installer saved in `~/.config/windows/credentials`
 and the same flags as the launcher. Closing a window opened this way leaves
 the VM running.
 
+If that file is missing, Connect refuses and says so. It doesn't fall back to
+the image's well-known `docker`/`admin` defaults. The password goes to FreeRDP
+through a file descriptor (`/args-from:fd`), not the command line, so other
+local users can't read it from `/proc/<pid>/cmdline`. `/cert:ignore` skips RDP
+certificate checks, which is safe only because the target is always the local
+container on `127.0.0.1`.
+
 **Stop** asks for your password once. If the original `launch` is still
 waiting on its RDP window, `bin/winvm-stop` closes that window and lets the
 launcher stop the VM, as it would anyway. Stopping the container directly

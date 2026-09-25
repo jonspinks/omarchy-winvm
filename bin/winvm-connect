@@ -27,8 +27,14 @@ read_credential() {
   return 1
 }
 
-WIN_USER=$(read_credential USERNAME) || WIN_USER=docker
-WIN_PASS=$(read_credential PASSWORD) || WIN_PASS=admin
+# No guessing: `docker`/`admin` are the image's well-known defaults, and a
+# plugin that silently tries them is one nobody asked to try them.
+if ! WIN_USER=$(read_credential USERNAME) || ! WIN_PASS=$(read_credential PASSWORD) ||
+  [[ -z $WIN_USER || -z $WIN_PASS ]]; then
+  notify-send -u critical "Windows VM" \
+    "No saved credentials in ~/.config/windows/credentials. Connect with: omarchy-windows-vm launch"
+  exit 1
+fi
 
 # Same realm-less Kerberos config the launcher writes, for the same reason:
 # without it FreeRDP goes looking for MIT's KDC and hangs when offline.
@@ -47,7 +53,26 @@ if ((pct >= 170)); then rdp_scale=(/scale:180)
 elif ((pct >= 130)); then rdp_scale=(/scale:140)
 fi
 
-exec xfreerdp3 /u:"$WIN_USER" /p:"$WIN_PASS" /v:127.0.0.1:3389 -grab-keyboard \
-  /sound /microphone /clipboard /cert:ignore /title:"Windows VM - Omarchy" \
-  /dynamic-resolution /gfx:AVC444 /floatbar:sticky:off,default:visible,show:fullscreen \
-  "${rdp_scale[@]}"
+# Arguments go through a file descriptor rather than argv, so the password
+# never appears in /proc/<pid>/cmdline, which every local user can read.
+# /args-from takes the whole command line, so the window title isn't in argv
+# either; WINVM_RDP marks the process for bin/winvm-sample and bin/winvm-stop,
+# which read it from the process environment (readable only by this user).
+# /cert:ignore is safe only because the target is the local container.
+export WINVM_RDP=1
+exec 3<<ARGS
+/u:$WIN_USER
+/p:$WIN_PASS
+/v:127.0.0.1:3389
+-grab-keyboard
+/sound
+/microphone
+/clipboard
+/cert:ignore
+/title:Windows VM - Omarchy
+/dynamic-resolution
+/gfx:AVC444
+/floatbar:sticky:off,default:visible,show:fullscreen
+${rdp_scale[*]}
+ARGS
+exec xfreerdp3 /args-from:fd:3
