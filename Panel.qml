@@ -366,7 +366,7 @@ Panel {
 
         Text {
           width: parent.width
-          text: "c connect · w console · f shared · s stop · right-click the icon to connect"
+          text: "c connect · w console · f shared · s stop · r refresh"
           textFormat: Text.PlainText
           elide: Text.ElideRight
           opacity: 0.45

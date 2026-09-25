@@ -1,8 +1,9 @@
 import QtQuick
 import qs.Commons
 
-// One resource, one bar, one number. Shared with blacksheep.sysload so the two
-// panels read the same way; `leading` marks the resource closest to its limit.
+// One resource, one bar, one number: a label, a fill that warms from the
+// theme foreground through accent to urgent, the figure, and an optional note
+// underneath. `leading` gives the row emphasis.
 Item {
   id: root
 
@@ -10,7 +11,7 @@ Item {
   property real value: 0            // 0..1, drives the bar
   property string valueText: ""
   property string note: ""
-  property bool leading: false      // the resource closest to its limit
+  property bool leading: false      // emphasise this row
   property color foreground: Color.foreground
   property color hotColor: Color.urgent
   property color midColor: Color.accent

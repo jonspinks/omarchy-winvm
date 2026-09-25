@@ -4,6 +4,8 @@ An icon that exists only while the Omarchy Windows VM (`omarchy-windows-vm`)
 is running. Click it for what the VM is costing the host and the controls to
 get back to it or shut it down.
 
+![The Windows VM panel](screenshot.png)
+
 ## Install
 
 ```bash
@@ -57,13 +59,31 @@ Memory is the host's view. Windows zeroes its RAM at boot, so a running guest
 holds nearly all of its allocation whatever Task Manager says. The meter shows
 what the VM takes from Linux, not how much Windows is using.
 
-One sample is a single ~30ms fork. The widget polls every 5s while closed
+A sample takes about 30ms. The widget polls every 5s while closed
 (which is also how quickly the icon appears after the VM starts) and every 2s
 while the panel is open. Both are settable inline in `shell.json`:
 
 ```json
 { "id": "blacksheep.winvm", "interval": 2, "idleInterval": 5 }
 ```
+
+## Requirements
+
+- The Omarchy Windows VM, installed with `omarchy-windows-vm install`
+- Docker with the systemd cgroup driver on cgroup v2 (the Arch default), so
+  the container shows up as a `docker-<id>.scope` under `system.slice`
+
+## Troubleshooting
+
+**The icon never appears.** It only shows while the container is running.
+Check with `bin/winvm-sample`, which prints `{"running":false}` when it can't
+find the VM.
+
+**The VM starts once, then won't start again.** This is an Omarchy bug, not
+this widget: the container sets the setgid bit on `~/Windows`, and the
+launcher's permission check then fails without saying why. Run
+`chmod g-s ~/Windows` and launch again. It's tracked at
+[omacom/omarchy#13244](https://github.com/omacom/omarchy/issues/13244).
 
 ## License
 
